@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/felipeazsantos/deploy-gcloudrun-fullcycle-lab01/config/getenv"
@@ -15,11 +16,13 @@ import (
 )
 
 func FindTemperatureByCEP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	cep := r.URL.Query().Get("cep")
-	weatherApiKey := r.Header.Get("API_KEY")
+	weatherApiKey := r.Header.Get("WEATHER_API_KEY")
 
 	if err := weatherRequestValidation(cep, weatherApiKey); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	fullAddress, err := getFullAddressByCep(cep)
@@ -51,11 +54,11 @@ func FindTemperatureByCEP(w http.ResponseWriter, r *http.Request) {
 
 func weatherRequestValidation(cep, weatherApiKey string) error {
 	if !validation.IsValidCEP(cep) {
-		return fmt.Errorf("invalid cep: %s", cep)
+		return errors.New("invalid cep")
 	}
 
 	if strings.TrimSpace(weatherApiKey) == "" {
-		return errors.New("weather api key is mandatory")
+		return errors.New("WEATHER_API_KEY header is mandatory")
 	}
 
 	return nil
@@ -83,7 +86,7 @@ func getFullAddressByCep(cep string) (*domain.Cep, error) {
 }
 
 func getWeatherInfo(fullAddress *domain.Cep, weatherApiKey string) (*domain.Weather, error) {
-	weatherApiUrl := fmt.Sprintf(getenv.ApiWeatherUrl, weatherApiKey, fullAddress.Localidade)
+	weatherApiUrl := fmt.Sprintf(getenv.ApiWeatherUrl, weatherApiKey, url.QueryEscape(fullAddress.Localidade))
 	response, err := http.Get(weatherApiUrl)
 	if err != nil {
 		return nil, err
