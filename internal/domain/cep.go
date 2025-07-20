@@ -1,6 +1,5 @@
 package domain
 
-
 type Cep struct {
 	Cep         string `json:"cep"`
 	Logradouro  string `json:"logradouro"`

@@ -15,6 +15,15 @@ import (
 	"github.com/felipeazsantos/deploy-gcloudrun-fullcycle-lab01/internal/validation"
 )
 
+type WeatherApiInterface interface {
+	GetFullAddressByCep(cep string) (*domain.Cep, error)
+	GetWeatherInfo(fullAddress *domain.Cep, weatherApiKey string) (*domain.Weather, error)
+}
+
+type weatherApi struct{}
+
+var wAPI WeatherApiInterface = &weatherApi{}
+
 func FindTemperatureByCEP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	cep := r.URL.Query().Get("cep")
@@ -25,17 +34,16 @@ func FindTemperatureByCEP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fullAddress, err := getFullAddressByCep(cep)
+	fullAddress, err := wAPI.GetFullAddressByCep(cep)
 	if err != nil {
-		status := http.StatusInternalServerError
 		if strings.Contains(err.Error(), "not found") {
-			status = http.StatusNotFound
+			http.Error(w, "can not find zipcode", http.StatusNotFound)
 		}
-		http.Error(w, err.Error(), status)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	weatherInfo, err := getWeatherInfo(fullAddress, weatherApiKey)
+	weatherInfo, err := wAPI.GetWeatherInfo(fullAddress, weatherApiKey)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -64,7 +72,7 @@ func weatherRequestValidation(cep, weatherApiKey string) error {
 	return nil
 }
 
-func getFullAddressByCep(cep string) (*domain.Cep, error) {
+func (w *weatherApi) GetFullAddressByCep(cep string) (*domain.Cep, error) {
 	urlApi := fmt.Sprintf(getenv.ApiCepUrl, cep)
 	response, err := http.Get(urlApi)
 	if err != nil {
@@ -82,10 +90,14 @@ func getFullAddressByCep(cep string) (*domain.Cep, error) {
 		return nil, err
 	}
 
+	if result.Localidade == "" {
+		return nil, errors.New("not found")
+	}
+
 	return result, nil
 }
 
-func getWeatherInfo(fullAddress *domain.Cep, weatherApiKey string) (*domain.Weather, error) {
+func (w *weatherApi) GetWeatherInfo(fullAddress *domain.Cep, weatherApiKey string) (*domain.Weather, error) {
 	weatherApiUrl := fmt.Sprintf(getenv.ApiWeatherUrl, weatherApiKey, url.QueryEscape(fullAddress.Localidade))
 	response, err := http.Get(weatherApiUrl)
 	if err != nil {
