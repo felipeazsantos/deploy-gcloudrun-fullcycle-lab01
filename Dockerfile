@@ -4,7 +4,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 WORKDIR /app/cmd/server
-RUN CGO_ENABLED=0 ldflags="-s -w" go build -o /bin/server
+RUN CGO_ENABLED=0 ldflags="-s -w" GOOS=linux GOARCH=amd64 go build -o /bin/server
 
 FROM alpine:latest
 WORKDIR /root/
