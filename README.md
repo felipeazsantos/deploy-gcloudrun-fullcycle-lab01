@@ -45,3 +45,6 @@ go test ./...
 ```
 
 
+### App URL on Google Cloud 
+https://deploy-gcloudrun-fullcycle-lab-01-159735979117.us-central1.run.app
+
